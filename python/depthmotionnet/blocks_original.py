@@ -143,6 +143,7 @@ def flow_block_demon_original(image_pair, image2_2=None, intrinsics=None, prev_p
     if prev_predictions is None:
         conv2 = convrelu2_caffe_padding(name='conv2', inputs=conv1, num_outputs=64, kernel_size=7, stride=2, **conv_params)
         conv2_1 = convrelu2_caffe_padding(name='conv2_1', inputs=conv2, num_outputs=64, kernel_size=3, stride=1, **conv_params)
+        tf.add_to_collection('endpoints', conv2_1)
     else:
         conv2 = convrelu2_caffe_padding(name='conv2', inputs=conv1, num_outputs=32, kernel_size=7, stride=2, **conv_params)
 
@@ -189,17 +190,21 @@ def flow_block_demon_original(image_pair, image2_2=None, intrinsics=None, prev_p
     
     conv3 = convrelu2_caffe_padding(name='conv3', inputs=conv2_1, num_outputs=128, kernel_size=5, stride=2, **conv_params)
     conv3_1 = convrelu2_caffe_padding(name='conv3_1', inputs=conv3, num_outputs=128, kernel_size=3, stride=1, **conv_params)
+    tf.add_to_collection('endpoints', conv3_1)
     
     conv4 = convrelu2_caffe_padding(name='conv4', inputs=conv3_1, num_outputs=256, kernel_size=5, stride=2, **conv_params)
     conv4_1 = convrelu2_caffe_padding(name='conv4_1', inputs=conv4, num_outputs=256, kernel_size=3, stride=1, **conv_params)
+    tf.add_to_collection('endpoints', conv4_1)
     
     conv5 = convrelu2_caffe_padding(name='conv5', inputs=conv4_1, num_outputs=512, kernel_size=5, stride=2, **conv_params)
     conv5_1 = convrelu2_caffe_padding(name='conv5_1', inputs=conv5, num_outputs=512, kernel_size=3, stride=1, **conv_params)
+    tf.add_to_collection('endpoints', conv5_1)
     
     
     # expanding part
     with tf.variable_scope('predict_flow5'):
         predict_flowconf5 = _predict_flow_caffe_padding(conv5_1, predict_confidence=True, **conv_params)
+        tf.add_to_collection('endpoints', predict_flowconf5)
     
     with tf.variable_scope('upsample_flow5to4'):
         predict_flowconf5to4 = _upsample_prediction(predict_flowconf5, 2, **conv_params)
@@ -231,6 +236,7 @@ def flow_block_demon_original(image_pair, image2_2=None, intrinsics=None, prev_p
 
     with tf.variable_scope('predict_flow2'):
         predict_flowconf2 = _predict_flow_caffe_padding(concat2, predict_confidence=True, **conv_params)
+        tf.add_to_collection('endpoints', predict_flowconf2)
  
     return { 'predict_flowconf5': predict_flowconf5, 'predict_flowconf2': predict_flowconf2 }
 
@@ -272,6 +278,7 @@ def _predict_depthnormal_caffe_padding(inp, predicted_scale=None, predict_normal
         data_format=data_format,
         **kwargs,
     )
+    tf.add_to_collection('endpoints', tmp2)
 
     if predict_normals:
 
@@ -365,15 +372,19 @@ def depthmotion_block_demon_original(image_pair, image2_2, prev_flow2, prev_flow
     conv_extra_inputs = convrelu2_caffe_padding(name='conv2_extra_inputs', inputs=concat_extra_inputs, num_outputs=32, kernel_size=3, stride=1, **conv_params)
     conv2_concat = tf.concat((conv2,conv_extra_inputs),axis=1 if data_format=='channels_first' else 3)
     conv2_1 = convrelu2_caffe_padding(name='conv2_1', inputs=conv2_concat, num_outputs=64, kernel_size=3, stride=1, **conv_params)
+    tf.add_to_collection('endpoints', conv2_1)
     
     conv3 = convrelu2_caffe_padding(name='conv3', inputs=conv2_1, num_outputs=128, kernel_size=5, stride=2, **conv_params)
     conv3_1 = convrelu2_caffe_padding(name='conv3_1', inputs=conv3, num_outputs=128, kernel_size=3, stride=1, **conv_params)
+    tf.add_to_collection('endpoints', conv3_1)
     
     conv4 = convrelu2_caffe_padding(name='conv4', inputs=conv3_1, num_outputs=256, kernel_size=5, stride=2, **conv_params)
     conv4_1 = convrelu2_caffe_padding(name='conv4_1', inputs=conv4, num_outputs=256, kernel_size=3, stride=1, **conv_params)
+    tf.add_to_collection('endpoints', conv4_1)
     
     conv5 = convrelu2_caffe_padding(name='conv5', inputs=conv4_1, num_outputs=512, kernel_size=3, stride=2, **conv_params)
     conv5_1 = convrelu2_caffe_padding(name='conv5_1', inputs=conv5, num_outputs=512, kernel_size=3, stride=1, **conv_params)
+    tf.add_to_collection('endpoints', conv5_1)
     
     
     # motion prediction part
@@ -385,6 +396,8 @@ def depthmotion_block_demon_original(image_pair, image2_2, prev_flow2, prev_flow
         strides=1,
         **conv_params,
     )
+    tf.add_to_collection('endpoints', motion_conv1)
+
     if data_format=='channels_last':
         motion_conv1 = convert_NHWC_to_NCHW(motion_conv1)
     motion_fc1 = tf.layers.dense(
